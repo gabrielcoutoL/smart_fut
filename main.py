@@ -1,6 +1,7 @@
-def main():
-    print("Hello from smart-fut!")
+from fastapi import FastAPI
 
+from routers import teams
 
-if __name__ == "__main__":
-    main()
+app = FastAPI(title="Smart Fut API")
+
+app.include_router(teams.router, prefix="/teams", tags=["Teams"])
