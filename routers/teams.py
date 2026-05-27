@@ -21,3 +21,9 @@ def create_team(team: TeamCreate):
     fake_teams_db.append(team_record)
 
     return team_record
+
+
+@router.get("/", status_code=HTTPStatus.OK, response_model=list[TeamResponse])
+def get_teams():
+
+    return fake_teams_db
