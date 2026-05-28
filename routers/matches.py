@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, Body, HTTPException, Path
 
+from core.exceptions import DomainException
+from routers.teams import fake_teams_db
 from schemas.matches import MatchCreate, MatchResponse
 
 router = APIRouter()
@@ -11,7 +13,38 @@ fake_matches_db = []
 
 
 @router.post("/", response_model=MatchResponse, status_code=HTTPStatus.CREATED)
-def create_match(match: MatchCreate):
+def create_match(
+    match: MatchCreate = Body(
+        openapi_examples={
+            "match_created": {
+                "summary": "Exemplo de partida criada com sucesso",
+                "description": "Payload enviado para a criação de uma partida",
+                "value": {
+                    "home_team_id": 1,
+                    "away_team_id": 2,
+                    "home_goals": 0,
+                    "away_goals": 1,
+                    "season": 2026,
+                },
+            }
+        }
+    ),
+):
+
+    if not any(d.get("id") == match.away_team_id for d in fake_teams_db):
+        raise DomainException(
+            status_code=404,
+            code="TEAM_NOT_FOUND",
+            message=f"TIME {match.away_team_id} NÃO ENCONTRADO",
+        )
+
+    if not any(d.get("id") == match.home_team_id for d in fake_teams_db):
+        raise DomainException(
+            status_code=404,
+            code="TEAM_NOT_FOUND",
+            message=f"TIME {match.home_team_id} NÃO ENCONTRADO",
+        )
+
     match_id = len(fake_matches_db) + 1
     match_data = match.model_dump()
 
