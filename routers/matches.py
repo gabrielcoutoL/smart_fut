@@ -1,9 +1,11 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
 
-from fastapi import APIRouter, Body, HTTPException, Path
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path
 
+from core.bg_tasks import recalculate_advanced_metrics
 from core.exceptions import DomainException
+from core.security import verify_api_key
 from routers.teams import fake_teams_db
 from schemas.matches import MatchCreate, MatchResponse
 
@@ -12,8 +14,14 @@ router = APIRouter()
 fake_matches_db = []
 
 
-@router.post("/", response_model=MatchResponse, status_code=HTTPStatus.CREATED)
-def create_match(
+@router.post(
+    "/",
+    response_model=MatchResponse,
+    status_code=HTTPStatus.CREATED,
+    dependencies=[Depends(verify_api_key)],
+)
+async def create_match(
+    background_tasks: BackgroundTasks,
     match: MatchCreate = Body(
         openapi_examples={
             "match_created": {
@@ -55,6 +63,9 @@ def create_match(
     }
 
     fake_matches_db.append(match_record)
+
+    background_tasks.add_task(recalculate_advanced_metrics, match_record["id"])
+
     return match_record
 
 

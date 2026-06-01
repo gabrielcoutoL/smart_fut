@@ -1,6 +1,9 @@
 import os
+import time
+import uuid
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from core import exceptions
@@ -30,3 +33,26 @@ def domain_exception_handler(request: Request, exc: exceptions.DomainException):
         status_code=exc.status_code,
         content={"error": {"code": exc.code, "message": exc.message}},
     )
+
+
+@app.middleware("http")
+async def add_custom_headers_and_log(request: Request, call_next):
+    request_id = str(uuid.uuid4())
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    process_time = time.time() - start_time
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Process-Time-Sec"] = str(round(process_time, 4))
+
+    return response
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "https://datacraque.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
