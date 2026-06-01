@@ -1,7 +1,8 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from core.security import verify_api_key
 from schemas.teams import TeamCreate, TeamResponse
 
 router = APIRouter()
@@ -9,7 +10,12 @@ router = APIRouter()
 fake_teams_db = []
 
 
-@router.post("/", status_code=HTTPStatus.CREATED, response_model=TeamResponse)
+@router.post(
+    "/",
+    status_code=HTTPStatus.CREATED,
+    response_model=TeamResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 def create_team(team: TeamCreate):
 
     team_id = len(fake_teams_db) + 1
