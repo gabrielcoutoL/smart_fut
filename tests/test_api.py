@@ -196,3 +196,43 @@ def test_get_matches_pagination_and_filters():
     response_pagination = client.get("/matches/?limit=2")
     assert response_pagination.status_code == 200
     assert len(response_pagination.json()) == 2
+
+
+def test_upload_crest_valid_png(client):
+
+    valid_png_content = b"\x89PNG\r\n\x1a\n" + b"RESTO_DO_ARQUIVO_FALSO"
+
+    response = client.post(
+        "/teams/1/crest", files={"file": ("escudo.png", valid_png_content, "image/png")}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["status"] == "Upload concluído"
+
+
+def test_upload_crest_invalid_file_type(client):
+
+    malicious_content = b"print('Hackeado!')"
+
+    response = client.post(
+        "/teams/1/crest", files={"file": ("virus.png", malicious_content, "image/png")}
+    )
+
+    assert response.status_code == 415
+    assert response.json()["detail"] == "Formato não suportado!"
+
+
+def test_upload_crest_file_too_large(client):
+
+    headers = {"Content-Length": "3000000"}
+
+    valid_png_content = b"\x89PNG\r\n\x1a\n" + b"RESTO_DO_ARQUIVO"
+
+    response = client.post(
+        "/teams/1/crest",
+        files={"file": ("escudo.png", valid_png_content, "image/png")},
+        headers=headers,
+    )
+
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Arquivo muito grande !"
