@@ -1,17 +1,28 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Body,
+    Depends,
+    HTTPException,
+    Path,
+    WebSocket,
+    WebSocketDisconnect,
+)
 
 from core.bg_tasks import recalculate_advanced_metrics
 from core.exceptions import DomainException
+from core.lifespan import fake_matches_db
 from core.security import verify_api_key
+from core.websockets import ConnectionManager
 from routers.teams import fake_teams_db
 from schemas.matches import MatchCreate, MatchResponse
 
-router = APIRouter()
+manager = ConnectionManager()
 
-fake_matches_db = []
+router = APIRouter()
 
 
 @router.post(
@@ -69,6 +80,11 @@ async def create_match(
     return match_record
 
 
+@router.post("/{match_id}/events")
+async def broadcast_events(payload: dict, match_id: int = Path(gt=0)):
+    await manager.broadcast(payload, match_id)
+
+
 @router.get("/", response_model=list[MatchResponse], status_code=HTTPStatus.OK)
 def get_matches(skip: int = 0, limit: int = 10, season: int | None = None):
 
@@ -89,3 +105,15 @@ def get_match_by_id(match_id: int = Path(gt=0)):
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Match not found")
 
     return match
+
+
+@router.websocket("/{match_id}/live")
+async def websocket_match(websocket: WebSocket, match_id: int = Path(gt=0)):
+
+    manager.connect(websocket=websocket, match_id=match_id)
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket=websocket, match_id=match_id)

@@ -2,12 +2,11 @@ from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, Path, UploadFile
 
+from core.lifespan import fake_teams_db
 from core.security import verify_api_key
 from schemas.teams import TeamCreate, TeamResponse
 
 router = APIRouter()
-
-fake_teams_db = []
 
 
 @router.post(

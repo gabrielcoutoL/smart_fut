@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from core import exceptions
+from core import exceptions, lifespan
 from routers import matches, teams
 
 ENV = os.getenv("ENV")
@@ -21,6 +21,7 @@ app = FastAPI(
     docs_url=None if ENV == "production" else "/docs",
     redoc_url=None if ENV == "production" else "/redoc",
     openapi_url=None if ENV == "production" else "/openapi.json",
+    lifespan=lifespan.lifespan,
 )
 
 app.include_router(teams.router, prefix="/teams", tags=["Teams"])
